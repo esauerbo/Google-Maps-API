@@ -19,11 +19,16 @@
         font-size: 12px;
       }
 
-      h1 {
+      h1, h2 {
         color: #525454;
         font-size: 22px;
         margin: 0 0 10px 0;
         text-align: center;
+      }
+
+      #hide-institutions,
+      #show-institutions {
+        width: 48%;
       }
 
       hr {
@@ -52,6 +57,11 @@
         width: 340px;
       }
 
+      #pano {
+        width: 200px;
+        height: 200px;
+      }
+
       .text {
         font-size: 12px;
       }
@@ -71,37 +81,20 @@
         width: 24%
       }
 
-      h2 {
-        color: #525454;
-        font-size: 22px;
-        margin: 0 0 10px 0;
-        text-align: center;
+      #add-institution-text{
+      position: relative;
+      width: 70%;
       }
 
-      h3 {
-        color: #525454;
-        font-size: 22px;
-        margin: 0 0 10px 0;
-        text-align: center;
-      }
-
-      #submit-add,
-      #submit-connect{
-        width: 24%;
-      }
-
-       #enter-first-school-text,
-       #enter-second-school-text,
-       #enter-institution-text{
-        position: relative;
-        width: 70%;
+      #add-institution{
+        width: 24%
       }
     </style>
   </head>
   <body>
     <div class="container">
       <div class="options-box">
-        <h1>Find Your Institution</h1>
+        <h1>Cal Poly Collaborations Network</h1>
         <div>
           <input id="show-institutions" type="button" value="Show Institutions">
           <input id="hide-institutions" type="button" value="Hide Institutions">
@@ -111,21 +104,14 @@
         </div>
         <hr>
         <div>
-          <input id="zoom-to-area-text" type="text" placeholder="Enter your favorite area!">
-          <input id="zoom-to-area" type="button" value="zoom">
+          <input id="zoom-to-area-text" type="text" placeholder="Enter an area!">
+          <input id="zoom-to-area" type="button" value="Zoom">
         </div>
         <hr>
-          <h2>Add an institution.</h2>
-          <div>
-               <input id="enter-institution-text" type="text" placeholder="Enter institution name.">
-               <input id="submit-add" type="button" value="Submit">
-          </div>
-        <hr>
-          <h3>Connect Two Schools</h3>
+        <h2>Add an institution.</h2>
         <div>
-            <input id="enter-first-school-text" type="text" placeholder="Enter first school here.">
-            <input id="enter-second-school-text" type="text" placeholder="Enter second school here.">
-            <input id="submit-connect" type="button" value="Submit">
+          <input id="add-institution-text" type="text" placeholder="Enter an institution name.">
+          <input id="add-institution" type="button" value="Add">
         </div>
       </div>
       <div id="map"></div>
@@ -135,9 +121,6 @@
 
       // Create a new blank array for all the everyone markers.
       var markers = [];
-
-      var locations = [];
-
 
       // This global polygon variable is to ensure only ONE polygon is rendered.
       var polygon = null;
@@ -221,14 +204,14 @@
 
         // These are the people that will be shown to the user.
         // Normally we'd have these in a database instead.
-         locations = [
+        var locations = [
           {title: 'Cal Poly SLO', location: {lat: 35.305496, lng: -120.6625}},
           {title: 'Berkeley', location: {lat: 37.8715, lng: -122.2730}},
           {title: 'Gonzaga', location: {lat: 47.66638, lng: -117.400930}},
           {title: 'Cornell', location: {lat: 42.453396, lng: -76.473586}},
         ];
 
-       // var largeInfowindow = new google.maps.InfoWindow();
+        var largeInfowindow = new google.maps.InfoWindow();
 
         // Initialize the drawing manager.
         var drawingManager = new google.maps.drawing.DrawingManager({
@@ -279,8 +262,8 @@
           });
         }
 
-        document.getElementById('show-institutions').addEventListener('click', showEveryone);
-        document.getElementById('hide-institutions').addEventListener('click', hideEveryone);
+        document.getElementById('show-institutions').addEventListener('click', showInstitutions);
+        document.getElementById('hide-institutions').addEventListener('click', hideInstitutions);
 
         document.getElementById('toggle-drawing').addEventListener('click', function() {
           toggleDrawing(drawingManager);
@@ -290,8 +273,10 @@
           zoomToArea();
         });
 
-        document.getElementById('submit-add').addEventListener('click', addMarker);
-        document.getElementById('submit-connect').addEventListener('click', connectMarkers);
+        document.getElementById('add-institution').addEventListener('click', function(){
+          addInstitution(markers, largeInfowindow);
+        });
+
 
 
 
@@ -303,7 +288,7 @@
           // If there is, get rid of it and remove the markers
           if (polygon) {
             polygon.setMap(null);
-            hideEveryone(markers);
+            hideInstitutions(markers);
           }
           // Switching the drawing mode to the HAND (i.e., no longer drawing).
           drawingManager.setDrawingMode(null);
@@ -330,15 +315,45 @@
           infowindow.setContent(marker.title);
           infowindow.marker = marker;
           // Make sure the marker property is cleared if the infowindow is closed.
-          infowindow.addListener('closeclick', function () {
+          infowindow.addListener('closeclick', function() {
             infowindow.marker = null;
           });
+          var streetViewService = new google.maps.StreetViewService();
+          var radius = 50;
+
+          // In case the status is OK, which means the pano was found, compute the
+          // position of the streetview image, then calculate the heading, then get a
+          // panorama from that and set the options
+          function getStreetView(data, status) {
+            if (status == google.maps.StreetViewStatus.OK) {
+              var nearStreetViewLocation = data.location.latLng;
+              var heading = google.maps.geometry.spherical.computeHeading(
+                nearStreetViewLocation, marker.position);
+                infowindow.setContent('<div>' + marker.title + '</div><div id="pano"></div>');
+                var panoramaOptions = {
+                  position: nearStreetViewLocation,
+                  pov: {
+                    heading: heading,
+                    pitch: 30
+                  }
+                };
+              var panorama = new google.maps.StreetViewPanorama(
+                document.getElementById('pano'), panoramaOptions);
+            } else {
+              infowindow.setContent('<div>' + marker.title + '</div>' +
+                '<div>No Street View Found</div>');
+            }
+          }
+          // Use streetview service to get the closest streetview image within
+          // 50 meters of the markers position
+          streetViewService.getPanoramaByLocation(marker.position, radius, getStreetView);
+          // Open the infowindow on the correct marker.
+          infowindow.open(map, marker);
         }
       }
 
-
       // This function will loop through the markers array and display them all.
-      function showEveryone() {
+      function showInstitutions() {
         var bounds = new google.maps.LatLngBounds();
         // Extend the boundaries of the map for each marker and display the marker
         for (var i = 0; i < markers.length; i++) {
@@ -349,13 +364,11 @@
       }
 
       // This function will loop through the markers and hide them all.
-      function hideEveryone() {
+      function hideInstitutions() {
         for (var i = 0; i < markers.length; i++) {
           markers[i].setMap(null);
         }
       }
-
-
 
       // This function takes in a COLOR, and then creates a new marker
       // icon of that color. The icon will be 21 px wide by 34 high, have an origin
@@ -409,10 +422,10 @@
         if (address == '') {
           window.alert('You must enter an area, or address.')
         } else {
-          // Geocode the address/area entered to get the center.
+          // Geocode the address/area entere dto get the center.
           // Then center the map on it and zoom in.
           geocoder.geocode(
-                  {address: address,
+                  {address: address
                   }, function(results, status) {
                    if (status == google.maps.GeocoderStatus.OK) {
                      map.setCenter(results[0].geometry.location);
@@ -425,38 +438,39 @@
         }
       }
 
-      function addMarker(){
+      function addInstitution(markers, infowindow){
         // Initialize the geocoder.
         var geocoder = new google.maps.Geocoder();
         // Get the address or place that the user entered.
-        var address = document.getElementById('enter-institution-text').value;
+        var address = document.getElementById('add-institution-text').value;
         // Make sure the address isn't blank.
         if (address == '') {
-          window.alert('You must enter an institution name or address.')
+          window.alert('You must enter a school name or address.')
         } else {
           // Geocode the address/area entered to get the center.
           // Then center the map on it and zoom in.
           geocoder.geocode(
-                  {address: address,
+                  {address: address
                   }, function(results, status) {
                    if (status == google.maps.GeocoderStatus.OK) {
                      var defaultIcon = makeMarkerIcon('0091ff');
                      var highlightedIcon = makeMarkerIcon('FFFF24');
                      map.setZoom(11);
                      map.setCenter(results[0].geometry.location);
-                     var marker = new google.maps.Marker({
-                       map,
+                     const marker = new google.maps.Marker({
+                       map: map,
+                       title: results[0].formatted_address, // How to get name instead of address?? 
                        position: results[0].geometry.location,
                        icon: defaultIcon,
                        animation: google.maps.Animation.DROP,
                        id: markers.length + 1
                      });
-                     infowindow.setContent(results[0].formatted_address);
-                     infowindow.open(map, marker);
                      markers.push(marker);
                      marker.addListener('click', function() {
-                        populateInfoWindow(this, largeInfowindow);
-                     });
+                       populateInfoWindow(this, infowindow);
+                      });
+                     // Two event listeners - one for mouseover, one for mouseout,
+                     // to change the colors back and forth.
                      marker.addListener('mouseover', function() {
                        this.setIcon(highlightedIcon);
                      });
@@ -471,17 +485,10 @@
         }
       }
 
-
-
-
-
-
-      func
     </script>
 
-    <script async defer
-        src=
-        "https://maps.googleapis.com/maps/api/js?libraries=geometry,drawing&key=AIzaSyC1fm5j1RQqJkszE5Z0KSyACHdX8vsC-mo&v=3&callback=initMap">
+    <script async defer src=
+        "https://maps.googleapis.com/maps/api/js?libraries=geometry,drawing&key=APIKEY&v=3&callback=initMap">
     </script>
 
   </body>

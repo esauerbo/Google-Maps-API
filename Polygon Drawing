@@ -371,7 +371,7 @@
 
     <script async defer
         src=
-        "https://maps.googleapis.com/maps/api/js?libraries=geometry,drawing&key=AIzaSyC1fm5j1RQqJkszE5Z0KSyACHdX8vsC-mo&v=3&callback=initMap">
+        "https://maps.googleapis.com/maps/api/js?libraries=geometry,drawing&key=APIKEY&v=3&callback=initMap">
     </script>
 
   </body>
