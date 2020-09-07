@@ -131,16 +131,17 @@
       <div id="map"></div>
     </div>
     <script>
+
       var map;
 
-      // Create a new blank array for all the everyone markers.
       var markers = [];
 
+      // Locations array to initialize markers
       var locations = [];
-
 
       // This global polygon variable is to ensure only ONE polygon is rendered.
       var polygon = null;
+
 
       function initMap() {
         // Create a styles array to use with the map.
@@ -211,7 +212,7 @@
           }
         ];
 
-        // Constructor creates a new map - only center and zoom are required.
+        // Constructor creates a new map
         map = new google.maps.Map(document.getElementById('map'), {
           center: {lat: 49.249212, lng: -54.353105},
           zoom: 3,
@@ -219,8 +220,8 @@
           mapTypeControl: false
         });
 
-        // These are the people that will be shown to the user.
-        // Normally we'd have these in a database instead.
+        // These are the universities that will be initially be shown on the map.
+        // Eventually they will be read in through CSV files
          locations = [
           {title: 'Cal Poly SLO', location: {lat: 35.305496, lng: -120.6625}},
           {title: 'Berkeley', location: {lat: 37.8715, lng: -122.2730}},
@@ -228,7 +229,7 @@
           {title: 'Cornell', location: {lat: 42.453396, lng: -76.473586}},
         ];
 
-       // var largeInfowindow = new google.maps.InfoWindow();
+        var largeInfowindow = new google.maps.InfoWindow();
 
         // Initialize the drawing manager.
         var drawingManager = new google.maps.drawing.DrawingManager({
@@ -269,6 +270,7 @@
           marker.addListener('click', function() {
             populateInfoWindow(this, largeInfowindow);
           });
+
           // Two event listeners - one for mouseover, one for mouseout,
           // to change the colors back and forth.
           marker.addListener('mouseover', function() {
@@ -303,7 +305,7 @@
           // If there is, get rid of it and remove the markers
           if (polygon) {
             polygon.setMap(null);
-            hideEveryone(markers);
+            hideInstitutions(markers);
           }
           // Switching the drawing mode to the HAND (i.e., no longer drawing).
           drawingManager.setDrawingMode(null);
@@ -326,9 +328,10 @@
       function populateInfoWindow(marker, infowindow) {
         // Check to make sure the infowindow is not already opened on this marker.
         if (infowindow.marker != marker) {
-          // Clear the infowindow content to give the streetview time to load.
-          infowindow.setContent(marker.title);
           infowindow.marker = marker;
+          infowindow.setContent('<div>' + marker.title + '</div>');
+          infowindow.open(map, marker);
+
           // Make sure the marker property is cleared if the infowindow is closed.
           infowindow.addListener('closeclick', function () {
             infowindow.marker = null;
@@ -470,10 +473,6 @@
           )
         }
       }
-
-
-
-
 
 
       func
